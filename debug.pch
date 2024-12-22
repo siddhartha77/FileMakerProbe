@@ -1,0 +1,8 @@
+/* This file is only used for Debug targets.
+   See Target Settings > C/C++ Language > Prefix File */
+
+#include <MacHeaders.h>
+
+#pragma precompile_target "Debug"
+
+#define __DEBUG__
