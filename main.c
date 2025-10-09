@@ -10,6 +10,9 @@
 #include "filemaker.h"
 #include "utils.h"
 
+#define APP_VERSION "v1.1"
+#define APP_YEAR    "2025"
+
 int main(void) {
     StrFileName         filename;
     StandardFileReply   sfReply;
@@ -90,40 +93,41 @@ void processDatabase(FSSpecPtr file) {
 #endif
     } else {
         printf("No key found. Is the database password protected?\n");
+        return;
     }
-    
-    /* Next search for the Access Block that contains the passwords */
-    do {
-        GetFPos(refNum, &filePos);        
-        err = FSRead(refNum, &count, block);
-       
-        if (err) {
-            printError(err);
-            return;
-        }
-    } while (!FMPIsAccessBlock((FMPBlockPtr)block, filePos));
-
-#ifdef __DEBUG__
-    printf("Access Block found at 0x%04x\n", filePos);
-#endif
-
-    closeDatabase(refNum);
     
     passwords = (FMPPasswordHndl)NewHandle(kMaxPasswordCount * sizeof(FMPPassword));
     HLock((Handle)passwords);
-    FMPGetPasswords((FMPBlockPtr)block, passwords, &passwordCount, filePos);
-    printf("\nPasswords:\n");
-    
-    for (i = 0 ; i < passwordCount ; ++i) {
-        pw = &(*passwords)[i];
-        FMPDecryptPassword(pw, key);
-        printf("%02d. %s", i + 1, pw->password);
+
+    /* Search for passwords in each block */
+    do {
+        GetFPos(refNum, &filePos);        
+        err = FSRead(refNum, &count, block);
         
-        if (pw->accessFlag == kFMPPasswordFullAccess) {
-            printf(" [Full Access]");
+        if (err == noErr) {
+            FMPGetPasswords((FMPBlockPtr)block, passwords, &passwordCount, filePos);
         }
+    } while (err == noErr);
+
+    closeDatabase(refNum);
+    
+    /* Decrypt the passwords */
+    if (passwordCount > 0) {
+        printf("\nPasswords:\n");
         
-        printf("\n");
+        for (i = 0 ; i < passwordCount ; ++i) {
+            pw = &(*passwords)[i];
+            FMPDecryptPassword(pw, key);
+            printf("%02d. %s", i + 1, pw->password);
+            
+            if (pw->accessFlag == kFMPPasswordFullAccess) {
+                printf(" [Full Access]");
+            }
+            
+            printf("\n");
+        }
+    } else {
+        printf("\nNo passwords found.\n");
     }
     
     HUnlock((Handle)passwords);
@@ -177,7 +181,7 @@ OSErr closeDatabase(short refNum) {
 }
 
 void printAbout() {
-    printf("FileMaker Probe v1.0\nsiddhartha, 2024\nhttps://github.com/siddhartha77/FileMakerProbe\n");
+    printf("FileMaker Probe "APP_VERSION"\nsiddhartha, "APP_YEAR"\nhttps://github.com/siddhartha77/FileMakerProbe\n");
     printBar(46);
     printf("\n");
 }

@@ -24,15 +24,25 @@ enum {
     kFMPKeyOffset           = 0x2D
 };
 
-/* If kFMPAccessBlockFieldRefMagic is in the block then it's
-   the Access Block. */
-enum {
-    kFMPAccessBlockFieldRefMagic = 0xFF5801CC
-};
+/* A password field is:
+    41 29 33 07 FF 05 ... A8 31 52 89 7F D2
+    MB FL RD MN AC PL UN  S2 P1 P2 P3 P4 P5
+    
+    MB: Password field type (kFMPFieldRefPasswordMagicType)
+    FL: Password field length -- must be >= 25 (kFMPFieldRefPasswordMagicLen)
+    RD: Random byte
+    MN: Magic nibble x7 where x is usually zero (kFMPFieldRefPasswordMagicNibble)
+    AC: Access bits (kFMPPasswordFullAccess is 0xFF)
+    PL: Password length
+    UN: Unknown/irrelevant data
+    S2: salt2 (salt1 is FL)
+    Pn: Password bytes
+*/
 
 enum {
-    kFMPFieldRefPasswordMagicType   = 0x41,     /* Password type */
-    kFMPFieldRefPasswordMagicLen    = 0x25,     /* Must be >= this */
+    kFMPFieldRefPasswordMagicType   = 0x41,
+    kFMPFieldRefPasswordMagicLen    = 0x25,
+    kFMPFieldRefPasswordMagicNibble = 0x7,
     kFMPPasswordFullAccess          = 0xFF
 };
 
@@ -118,7 +128,8 @@ typedef struct FMPBlock*    FMPBlockPtr;
 struct FMPPasswordField {
     FMPFieldRefSimple       fieldType;
     FMPFieldRefSimpleLen    fieldLen;
-    uint8_t                 unknown1[2];
+    uint8_t                 random;
+    uint8_t                 passwordFlag;
     uint8_t                 accessFlag;
     uint8_t                 passwordLen;
     uint8_t                 unknown2[31];
@@ -149,7 +160,6 @@ static uint8_t FMPMagicHeader[kFMPMagicHeaderLen] = {
 
 uint32_t    FMPIsValidDatabase(uint8_t *header);
 FMPKey      FMPGetKey(FMPBlockPtr block, int32_t filePos);
-uint32_t    FMPIsAccessBlock(FMPBlockPtr block, uint32_t filePos);
 void        FMPGetPasswords(FMPBlockPtr block, FMPPasswordHndl passwords, int32_t *count, int32_t filePos);
 uint32_t    FMPSkipPayloadBytes(FMPPayloadBytePtr payload);
 void        FMPDecryptPassword(FMPPasswordPtr pw, FMPKey key);

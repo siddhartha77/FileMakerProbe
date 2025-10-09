@@ -42,31 +42,6 @@ FMPKey FMPGetKey(FMPBlockPtr block, int32_t filePos) {
     return key;
 }
 
-/* filePos is just used as a debugging tool in the even of an error */
-uint32_t FMPIsAccessBlock(FMPBlockPtr block, uint32_t filePos) {
-    uint32_t            i = 0;
-    uint32_t            bytesToSkip;
-    FMPPayloadBytePtr   payload = block->payload;
-
-    while (*((FMPFieldRef32BitMagicPtr)(&payload[i])) != kFMPAccessBlockFieldRefMagic) {
-        bytesToSkip = FMPSkipPayloadBytes(&payload[i]);
-        
-        /* There was probably and error here */
-        if (bytesToSkip == 0) {
-            PRINT_BAD_FIELD_BYTE_ERROR(filePos, i, payload[i]);
-            ++i;
-            return 0;
-        }
-        
-        i += bytesToSkip;
-        
-        /* No key found! */
-        if (i >= block->payloadLen) return 0;
-    }
-    
-    return 1;
-}
-
 void FMPGetPasswords(FMPBlockPtr block, FMPPasswordHndl passwords, int32_t *count, int32_t filePos) {
     uint32_t                i = 0;
     uint32_t                j = 0;
@@ -74,18 +49,17 @@ void FMPGetPasswords(FMPBlockPtr block, FMPPasswordHndl passwords, int32_t *coun
     FMPPayloadBytePtr       payload = block->payload;
     FMPPasswordFieldPtr     pwField;
     FMPPasswordPtr          pw;
-    FMPFieldRefSimple       fieldRef;
-    FMPFieldRefSimpleLen    fieldLen;
-    
-    *count = 0;
     
     while (true) {
-        fieldRef = *((FMPFieldRefPasswordMagicPtr)(&payload[i]));
-        fieldLen = payload[i + sizeof(FMPFieldRefSimpleLen)];
+        pwField = (FMPPasswordFieldPtr)(&payload[i]);
         
-        if ((fieldRef == kFMPFieldRefPasswordMagicType) && (fieldLen >= kFMPFieldRefPasswordMagicLen)) {
-            /* Copy everything to our smaller struct to save memory */
-            pwField = (FMPPasswordFieldPtr)(&payload[i]);
+        if ((pwField->fieldType == kFMPFieldRefPasswordMagicType) &&
+            (pwField->fieldLen >= kFMPFieldRefPasswordMagicLen) &&
+            ((pwField->passwordFlag & 0xF) == kFMPFieldRefPasswordMagicNibble) &&
+            (pwField->accessFlag > 0) &&
+            (pwField->passwordLen > 0))
+        {
+            /* Increment the passward count here too */
             pw = &((*passwords)[(*count)++]);
             pw->accessFlag = pwField->accessFlag;
             pw->salt1 = pwField->fieldLen;
