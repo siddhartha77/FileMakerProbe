@@ -18,21 +18,31 @@ FMPKey FMPGetKey(FMPBlockPtr block, int32_t filePos) {
     uint32_t            bytesToSkip;
     uint32_t            key;    
     FMPPayloadBytePtr   payload = block->payload;
+    FMPKeyFieldPtr      keyField;
     
-    while (*((FMPFieldRefKeyMagicPtr)(&payload[i])) != kFMPFieldRefKeyMagic) {
-        bytesToSkip = FMPSkipPayloadBytes(&payload[i]);
+    while (true) {
+        keyField = (FMPKeyFieldPtr)(&payload[i]);
         
-        /* There was probably and error here */
-        if (bytesToSkip == 0) {
-            PRINT_BAD_FIELD_BYTE_ERROR(filePos, i, payload[i]);
-            ++i;
-            return 0;
+        if (keyField->fieldType == kFMPFieldRefKeyMagicType &&
+            keyField->fieldLen == kFMPFieldRefKeyMagicLen &&
+            keyField->fieldID == kFMPFieldRefKeyMagicID)
+        {
+            break;
+        } else {
+            bytesToSkip = FMPSkipPayloadBytes(&payload[i]);
+        
+            /* There was probably and error here */
+            if (bytesToSkip == 0) {
+                PRINT_BAD_FIELD_BYTE_ERROR(filePos, i, payload[i]);
+                ++i;
+                return 0;
+            }
+            
+            i += bytesToSkip;
+            
+            /* No key found! */
+            if (i >= block->payloadLen) return 0;
         }
-        
-        i += bytesToSkip;
-        
-        /* No key found! */
-        if (i >= block->payloadLen) return 0;
     }
     
     i += sizeof(FMPFieldRefKeyMagic);
