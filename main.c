@@ -10,8 +10,8 @@
 #include "filemaker.h"
 #include "utils.h"
 
-#define APP_VERSION "v1.1"
-#define APP_YEAR    "2025"
+#define APP_VERSION "v1.2"
+#define APP_YEAR    "2026"
 
 int main(void) {
     StrFileName         filename;
