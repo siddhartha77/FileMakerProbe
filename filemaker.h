@@ -17,11 +17,13 @@ enum {
     kFMPStartingOffset      = 0x1000
 };
 
-/* To find the key, we search the block for kFMPFieldRefKeyMagic and 
+/* To find the key, we search the block for kFMPFieldRefKeyMagicType/Len/ID and 
    kFMPKeyOffset after that is the key */
 enum {
-    kFMPFieldRefKeyMagic    = 0x01FC,    
-    kFMPKeyOffset           = 0x2D
+    kFMPFieldRefKeyMagicType    = 0x01,
+    kFMPFieldRefKeyMagicLen     = 0xFC,
+    kFMPFieldRefKeyMagicID      = 0xEC,
+    kFMPKeyOffset               = 0x2B
 };
 
 /* A password field is:
@@ -100,7 +102,7 @@ typedef uint8_t     FMP16BitFieldRef;
 typedef uint16_t                    FMPPayload16Bit;
 typedef FMPPayload16Bit*            FMPPayload16BitPtr;
 
-typedef uint16_t                    FMPFieldRefKeyMagic;
+typedef uint32_t                    FMPFieldRefKeyMagic;
 typedef FMPFieldRefKeyMagic*        FMPFieldRefKeyMagicPtr;
 
 typedef FMPFieldRefSimple           FMPFieldRefPasswordMagic;
@@ -124,6 +126,14 @@ struct FMPBlock {
 };
 typedef struct FMPBlock     FMPBlock;
 typedef struct FMPBlock*    FMPBlockPtr;
+
+struct FMPKeyField {
+    FMPFieldRefLong         fieldType;
+    FMPFieldRefLongLen      fieldLen;
+    FMPFieldRefLongID       fieldID;
+};
+typedef struct FMPKeyField  FMPKeyField;
+typedef FMPKeyField*        FMPKeyFieldPtr;
 
 struct FMPPasswordField {
     FMPFieldRefSimple       fieldType;
