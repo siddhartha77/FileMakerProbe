@@ -28,24 +28,24 @@ enum {
 
 /* A password field is:
     41 29 33 07 FF 05 ... A8 31 52 89 7F D2
-    MB FL RD MN AC PL UN  S2 P1 P2 P3 P4 P5
+    MB FL RD UN AC PL UN  S2 P1 P2 P3 P4 P5
     
     MB: Password field type (kFMPFieldRefPasswordMagicType)
-    FL: Password field length -- must be >= 25 (kFMPFieldRefPasswordMagicLen)
+    FL: Password field length -- must be >= 24 (kFMPFieldRefPasswordMagicLen)
     RD: Random byte
-    MN: Magic nibble x7 where x is usually zero (kFMPFieldRefPasswordMagicNibble)
+    UN: Unknown/irrelevant data
     AC: Access bits (kFMPPasswordFullAccess is 0xFF)
     PL: Password length
     UN: Unknown/irrelevant data
     S2: salt2 (salt1 is FL)
-    Pn: Password bytes
+    Pn: Password bytes (of length n)
 */
 
 enum {
     kFMPFieldRefPasswordMagicType   = 0x41,
-    kFMPFieldRefPasswordMagicLen    = 0x25,
-    kFMPFieldRefPasswordMagicNibble = 0x7,
-    kFMPPasswordFullAccess          = 0xFF
+    kFMPFieldRefPasswordMagicLen    = 0x24,
+    kFMPPasswordFullAccess          = 0xFF,
+    kFMPPasswordMaxLen              = 31
 };
 
 /* FMP field type bytes
@@ -53,7 +53,7 @@ enum {
      https://github.com/qwesda/fp5dump/blob/master/fp5.grammar
      https://github.com/evanmiller/fmptools/blob/main/HACKING */
 enum {
-    kFMPDataSimpleMin       = 0x81,
+    kFMPDataSimpleMin       = 0x80,
     kFMPDataSimpleMax       = 0xBF,
     
     kFMPFieldRefSimpleID    = 0x00,
@@ -67,7 +67,7 @@ enum {
     kFMPPathPop             = 0xC0,
     
     kFMPPathPushLo          = 0xC1,
-    kFMPPathPushHi          = 0xFC,
+    kFMPPathPushHi          = 0xFE,
     
     /* 2-byte data length */
     kFMP16BitFlag           = 0xFF,
@@ -82,7 +82,7 @@ enum {
     kFMPCryptSeed           = 0x55
 };
 
-typedef uint32_t    FMPKey;
+typedef int32_t     FMPKey;
 typedef FMPKey*     FMPKeyPtr;
 
 typedef uint8_t     FMPDataSimple;
@@ -167,6 +167,8 @@ static uint8_t FMPMagicHeader[kFMPMagicHeaderLen] = {
     0x00, 0x05, 0x00, 0x02,
     0x00, 0x02, 0xC0
 };
+
+static const uint8_t FMPNoPasswordStr[] = "(no password)";
 
 uint32_t    FMPIsValidDatabase(uint8_t *header);
 FMPKey      FMPGetKey(FMPBlockPtr block, int32_t filePos);
