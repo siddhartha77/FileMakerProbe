@@ -10,7 +10,7 @@
 #include "filemaker.h"
 #include "utils.h"
 
-#define APP_VERSION "v1.2"
+#define APP_VERSION "v1.4"
 #define APP_YEAR    "2026"
 
 int main(void) {
@@ -65,6 +65,7 @@ void processDatabase(FSSpecPtr file) {
     long                    passwordCount = 0;
     FMPPasswordHndl         passwords;
     FMPPasswordPtr          pw;
+    Str255                  pwNormalized;
     int                     i;
     
     err = openDatabase(file, &refNum);
@@ -96,6 +97,9 @@ void processDatabase(FSSpecPtr file) {
         return;
     }
     
+    /* Reset the file position to the start as sometimes the passwords are before the key */
+    SetFPos(refNum, fsFromStart, kFMPStartingOffset);
+    
     passwords = (FMPPasswordHndl)NewHandle(kMaxPasswordCount * sizeof(FMPPassword));
     HLock((Handle)passwords);
 
@@ -118,7 +122,15 @@ void processDatabase(FSSpecPtr file) {
         for (i = 0 ; i < passwordCount ; ++i) {
             pw = &(*passwords)[i];
             FMPDecryptPassword(pw, key);
-            printf("%02d. %s", i + 1, pw->password);
+            myCopyPStr(&pw->len, pwNormalized);
+            myReplaceCharWithPStrInPStr(pwNormalized, ' ', "\p<space>");
+            pwNormalized[pwNormalized[0] + 1] = '\0';
+            
+            if (pw->len > 0) {
+                printf("%02d. %s", i + 1, &pwNormalized[1]);
+            } else {
+                printf("%02d. %s", i + 1, pw->password);
+            }
             
             if (pw->accessFlag == kFMPPasswordFullAccess) {
                 printf(" [Full Access]");
@@ -181,8 +193,16 @@ OSErr closeDatabase(short refNum) {
 }
 
 void printAbout() {
-    printf("FileMaker Probe "APP_VERSION"\nsiddhartha, "APP_YEAR"\nhttps://github.com/siddhartha77/FileMakerProbe\n");
+    printf(
+        "FileMaker Probe "APP_VERSION"\nsiddhartha,"
+        ""APP_YEAR"\nhttps://github.com/siddhartha77/FileMakerProbe"
+        "\n");    
     printBar(46);
+    printf(
+        "Hold down the Option key when opening a database"
+        "\n"
+        "in FileMaker Pro to force password entry."
+        "\n");
     printf("\n");
 }
 
