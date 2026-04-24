@@ -64,10 +64,9 @@ void FMPGetPasswords(FMPBlockPtr block, FMPPasswordHndl passwords, int32_t *coun
         pwField = (FMPPasswordFieldPtr)(&payload[i]);
         
         if ((pwField->fieldType == kFMPFieldRefPasswordMagicType) &&
-            (pwField->fieldLen >= kFMPFieldRefPasswordMagicLen) &&
-            ((pwField->passwordFlag & 0xF) == kFMPFieldRefPasswordMagicNibble) &&
-            (pwField->accessFlag > 0) &&
-            (pwField->passwordLen > 0))
+            (pwField->passwordLen <= kFMPPasswordMaxLen) &&
+            (pwField->fieldLen - pwField->passwordLen == kFMPFieldRefPasswordMagicLen) &&
+            (pwField->accessFlag > 0))
         {
             /* Increment the passward count here too */
             pw = &((*passwords)[(*count)++]);
@@ -77,12 +76,18 @@ void FMPGetPasswords(FMPBlockPtr block, FMPPasswordHndl passwords, int32_t *coun
             pw->len = pwField->passwordLen;
             
             /* Copy the password over */
-            for (j = 0 ; j < pw->len ; ++j) {
-               pw->password[j] = pwField->password[j];
+            if (pw->len > 0) {
+                for (j = 0 ; j < pw->len ; ++j) {
+                   pw->password[j] = pwField->password[j];
+                }
+            } else {
+                for (j = 0 ; FMPNoPasswordStr[j] ; ++j) {
+                    pw->password[j] = FMPNoPasswordStr[j];
+                } 
             }
             
-            /* NULL terminate it */
-            pw->password[j] = '\0';
+           /* NULL terminate the password */
+           pw->password[j] = '\0';
         };
         
         bytesToSkip = FMPSkipPayloadBytes(&payload[i]);
@@ -110,7 +115,7 @@ uint32_t FMPSkipPayloadBytes(FMPPayloadBytePtr payload) {
     
     if (payloadByte >= kFMPDataSimpleMin && payloadByte <= kFMPDataSimpleMax) {
         bytesToSkip += sizeof(FMPDataSimple);
-        bytesToSkip += payloadByte - (kFMPDataSimpleMin - 1);
+        bytesToSkip += payloadByte - kFMPDataSimpleMin;
         
         return bytesToSkip;
     }
